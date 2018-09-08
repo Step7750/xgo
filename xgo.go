@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -244,10 +245,10 @@ func compile(image string, config *ConfigFlags, flags *BuildFlags, folder string
 		for _, gopath := range strings.Split(os.Getenv("GOPATH"), string(os.PathListSeparator)) {
 			// Since docker sandboxes volumes, resolve any symlinks manually
 			sources := filepath.Join(gopath, "src")
-			filepath.Walk(sources, func(path string, info os.FileInfo, err error) error {
+			filepath.Walk(sources, func(pathv string, info os.FileInfo, err error) error {
 				// Skip any folders that errored out
 				if err != nil {
-					log.Printf("Failed to access GOPATH element %s: %v", path, err)
+					log.Printf("Failed to access GOPATH element %s: %v", pathv, err)
 					return nil
 				}
 				// Skip anything that's not a symlink
@@ -255,7 +256,7 @@ func compile(image string, config *ConfigFlags, flags *BuildFlags, folder string
 					return nil
 				}
 				// Resolve the symlink and skip if it's not a folder
-				target, err := filepath.EvalSymlinks(path)
+				target, err := filepath.EvalSymlinks(pathv)
 				if err != nil {
 					return nil
 				}
@@ -268,18 +269,20 @@ func compile(image string, config *ConfigFlags, flags *BuildFlags, folder string
 				}
 				// Folder needs explicit mounting due to docker symlink security
 				locals = append(locals, target)
-				mounts = append(mounts, filepath.Join("/ext-go", strconv.Itoa(len(locals)), "src", strings.TrimPrefix(path, sources)))
-				paths = append(paths, filepath.Join("/ext-go", strconv.Itoa(len(locals))))
+				mounts = append(mounts, path.Join("/ext-go", strconv.Itoa(len(locals)), "src", strings.TrimPrefix(pathv, sources)))
+				paths = append(paths, path.Join("/ext-go", strconv.Itoa(len(locals))))
 				return nil
 			})
 			// Export the main mount point for this GOPATH entry
 			locals = append(locals, sources)
-			mounts = append(mounts, filepath.Join("/ext-go", strconv.Itoa(len(locals)), "src"))
-			paths = append(paths, filepath.Join("/ext-go", strconv.Itoa(len(locals))))
+			mounts = append(mounts, path.Join("/ext-go", strconv.Itoa(len(locals)), "src"))
+			paths = append(paths, path.Join("/ext-go", strconv.Itoa(len(locals))))
 		}
 	}
 	// Assemble and run the cross compilation command
 	fmt.Printf("Cross compiling %s...\n", config.Repository)
+
+	fmt.Printf("Locals: %v\nMounts: %v\nPaths: %v\n", locals, mounts, paths);
 
 	args := []string{
 		"run", "--rm",
