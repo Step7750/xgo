@@ -53,7 +53,7 @@ RUN \
   mv `basename $OSX_SDK_PATH` /osxcross/tarballs/        && \
   \
   sed -i -e 's|-march=native||g' /osxcross/build_clang.sh /osxcross/wrapper/build.sh && \
-  UNATTENDED=yes OSX_VERSION_MIN=10.6 /osxcross/build.sh                             && \
+  UNATTENDED=yes OSX_VERSION_MIN=10.7 /osxcross/build.sh                             && \
   mv /osxcross/target $OSX_NDK_X86                                                   && \
   \
   rm -rf /osxcross
